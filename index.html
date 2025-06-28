@@ -5,8 +5,32 @@
   <title>마스터의 달력형 가계부</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: sans-serif; margin:40px; }
+    body {
+      font-family: sans-serif;
+      margin: 40px;
+      transition: background 0.6s;
+    }
     h1 { margin-bottom: 10px;}
+    #seasonBox {
+      text-align:center;
+      margin-bottom:28px;
+      padding:16px 0 10px 0;
+    }
+    #seasonImg {
+      height:65px;
+      vertical-align:middle;
+      filter: drop-shadow(0 4px 8px #0002);
+      margin-bottom:-10px;
+    }
+    #seasonFoods span {
+      display: inline-block;
+      font-size:1.2em;
+      padding: 3px 10px;
+      border-radius: 16px;
+      background: #fff6;
+      margin: 2px 6px 2px 0;
+      box-shadow: 0 2px 8px #0001;
+    }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #eee; border:1px solid #ddd;}
     .calendar-header, .calendar-day {
       padding: 12px 0; text-align: center; background: #fff;
@@ -34,6 +58,12 @@
 </head>
 <body>
   <h1>📅 마스터의 달력형 가계부</h1>
+  <!-- 계절/제철 식품 상단 안내 -->
+  <div id="seasonBox">
+    <img id="seasonImg" alt="계절 이미지">
+    <h2 id="seasonText" style="display:inline; font-size:1.25em; margin-left:8px;"></h2>
+    <div id="seasonFoods" style="margin-top:7px;"></div>
+  </div>
   <div>
     <button id="prevMonth">◀ 이전달</button>
     <span id="monthTitle" style="font-size:1.2em;font-weight:bold;"></span>
@@ -70,7 +100,50 @@
   <div id="annualSummary"></div>
 
 <script>
-  // 하위 카테고리
+  // 1. 계절/제철 식품/이미지/파스텔톤
+  const SEASON_MAP = [
+    {
+      name: "봄",   // 3~5월
+      months: [3,4,5],
+      bg: "#ffeef7",
+      img: "https://openmoji.org/data/color/svg/1F353.svg", // 딸기
+      foods: ["딸기🍓", "두릅", "쑥", "달래", "미나리"]
+    },
+    {
+      name: "여름", // 6~8월
+      months: [6,7,8],
+      bg: "#e3faff",
+      img: "https://openmoji.org/data/color/svg/1F349.svg", // 수박
+      foods: ["수박🍉", "참외", "옥수수🌽", "오이🥒"]
+    },
+    {
+      name: "가을", // 9~11월
+      months: [9,10,11],
+      bg: "#fff7e3",
+      img: "https://openmoji.org/data/color/svg/1F34E.svg", // 사과
+      foods: ["밤🌰", "감", "사과🍎", "고구마", "버섯"]
+    },
+    {
+      name: "겨울", // 12,1,2월
+      months: [12,1,2],
+      bg: "#eaf3ff",
+      img: "https://openmoji.org/data/color/svg/1F34A.svg", // 귤
+      foods: ["귤🍊", "배추", "무", "대파", "방어🐟"]
+    }
+  ];
+  function getSeason(month) {
+    return SEASON_MAP.find(season => season.months.includes(month));
+  }
+  function updateSeasonUI(month) {
+    const season = getSeason(month);
+    document.body.style.background = season.bg;
+    document.getElementById('seasonImg').src = season.img;
+    document.getElementById('seasonText').textContent = `${season.name}의 제철`;
+    document.getElementById('seasonFoods').innerHTML =
+      season.foods.map(f => `<span>${f}</span>`).join('');
+  }
+
+  // 2. 가계부/달력 기본
   const subCategories = {
     '소비': ['식비', '교통비', '고정지출', '공과금', '거주비용', '문화비', '자기개발비', '기타(소비)'],
     '투자': ['적금', '보험', '주식', '가상화폐', '수집품', '기타(투자)'],
@@ -84,10 +157,10 @@
 
   // 달력 그리기
   function renderCalendar(year, month) {
+    updateSeasonUI(month+1);
     const calendar = document.getElementById('calendar');
     calendar.innerHTML = '';
     document.getElementById('monthTitle').textContent = `${year}년 ${month+1}월`;
-
     const weekDays = ['일','월','화','수','목','금','토'];
     for(let d of weekDays) {
       let hd = document.createElement('div');
@@ -126,7 +199,6 @@
     document.getElementById('selectedDate').textContent = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')} 내역`;
     renderEntryTable(key);
 
-    // 입력 폼 초기화
     document.getElementById('entryForm').onsubmit = function(e){
       e.preventDefault();
       const main = document.getElementById('mainCategory').value;
@@ -146,7 +218,6 @@
     document.getElementById('mainCategory').onchange = updateSubCategories;
     updateSubCategories();
   }
-  // 하위항목 드롭다운 동적 생성
   function updateSubCategories() {
     const main = document.getElementById('mainCategory').value;
     const subSel = document.getElementById('subCategory');
@@ -157,7 +228,6 @@
       subSel.appendChild(opt);
     }
   }
-  // 내역 테이블 그리기
   function renderEntryTable(key) {
     const table = document.getElementById('dataTable');
     table.innerHTML = '';
@@ -168,7 +238,6 @@
       table.appendChild(tr);
     });
   }
-  // 내역 삭제
   window.deleteEntry = function(key, idx){
     if(allData[key]) {
       allData[key].splice(idx,1);
@@ -176,7 +245,6 @@
       renderCalendar(currentYear, currentMonth);
     }
   }
-  // 이전/다음달
   document.getElementById('prevMonth').onclick = () => {
     currentMonth--;
     if(currentMonth<0) { currentMonth=11; currentYear--; }
@@ -223,7 +291,6 @@
     html += `</table>`;
     document.getElementById('monthlySummary').innerHTML = html;
   }
-  // 월별 그래프
   function updateCharts() {
     const chartDiv = document.getElementById('charts');
     chartDiv.innerHTML = '';
@@ -262,9 +329,7 @@
       });
     });
   }
-  // 연말 자산증감/그래프
   function updateAnnualSummary() {
-    // 연도별 누적자산 = 전년+수입-소비-투자
     let yearly = {};
     Object.entries(allData).forEach(([date, arr])=>{
       const [y] = date.split('-');
@@ -303,10 +368,8 @@
       </tr>`;
     });
     html += `</table>`;
-    // 그래프
     html += `<canvas id="assetChart" width="400" height="260"></canvas>`;
     document.getElementById('annualSummary').innerHTML = html;
-    // 차트
     const ctx = document.getElementById('assetChart').getContext('2d');
     new Chart(ctx, {
       type: 'line',
@@ -320,11 +383,7 @@
           tension: 0.1
         }]
       },
-      options: {
-        plugins: {
-          legend: { display: false }
-        }
-      }
+      options: { plugins: { legend: { display: false } } }
     });
     // 메시지
     if (years.length > 1) {
@@ -339,3 +398,4 @@
 </script>
 </body>
 </html>
+
