@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>마스터의 가계부</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    select, input { margin: 5px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h1>📒 마스터의 가계부</h1>
+  <form id="entryForm">
+    <input type="date" id="date" required />
+    <select id="mainCategory">
+      <option value="소비">소비</option>
+      <option value="투자">투자</option>
+      <option value="수입">수입</option>
+    </select>
+    <select id="subCategory"></select>
+    <input type="number" id="amount" placeholder="금액" required />
+    <input type="text" id="note" placeholder="메모" />
+    <button type="submit">추가</button>
+  </form>
+
+  <h2>📋 목록</h2>
+  <table>
+    <thead>
+      <tr><th>날짜</th><th>항목</th><th>하위항목</th><th>금액</th><th>메모</th></tr>
+    </thead>
+    <tbody id="dataTable"></tbody>
+  </table>
+
+  <script>
+    const subCategories = {
+      '소비': ['식비', '교통비', '고정지출', '공과금', '거주비용', '문화비', '자기개발비', '기타(소비)'],
+      '투자': ['적금', '보험', '주식', '가상화폐', '수집품', '기타(투자)'],
+      '수입': ['월급', '이자수입', '배당수입', '기타수입']
+    };
+
+    const mainSelect = document.getElementById('mainCategory');
+    const subSelect = document.getElementById('subCategory');
+    const tableBody = document.getElementById('dataTable');
+    const form = document.getElementById('entryForm');
+
+    function updateSubCategories() {
+      const selected = mainSelect.value;
+      subSelect.innerHTML = '';
+      subCategories[selected].forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        subSelect.appendChild(opt);
+      });
+    }
+
+    mainSelect.addEventListener('change', updateSubCategories);
+    window.onload = updateSubCategories;
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const date = document.getElementById('date').value;
+      const main = mainSelect.value;
+      const sub = subSelect.value;
+      const amount = document.getElementById('amount').value;
+      const note = document.getElementById('note').value;
+
+      const row = document.createElement('tr');
+      [date, main, sub, amount, note].forEach(val => {
+        const cell = document.createElement('td');
+        cell.textContent = val;
+        row.appendChild(cell);
+      });
+      tableBody.appendChild(row);
+
+      form.reset();
+      updateSubCategories();
+    });
+  </script>
+</body>
+</html>
