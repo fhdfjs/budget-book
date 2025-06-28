@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>마스터의 가계부</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     select, input { margin: 5px; padding: 5px; }
+    .summary-table { margin-top:30px; width:auto; }
+    .asset-control { width:80px; }
+    #charts { display:flex; flex-wrap:wrap; gap:30px; margin-top:30px; }
+    .chart-area { width:340px; }
   </style>
 </head>
 <body>
@@ -33,17 +38,24 @@
     <tbody id="dataTable"></tbody>
   </table>
 
+  <div id="monthlySummary"></div>
+  <div id="charts"></div>
+  <div id="annualSummary"></div>
+
   <script>
+    // 서브카테고리
     const subCategories = {
       '소비': ['식비', '교통비', '고정지출', '공과금', '거주비용', '문화비', '자기개발비', '기타(소비)'],
       '투자': ['적금', '보험', '주식', '가상화폐', '수집품', '기타(투자)'],
       '수입': ['월급', '이자수입', '배당수입', '기타수입']
     };
-
     const mainSelect = document.getElementById('mainCategory');
     const subSelect = document.getElementById('subCategory');
     const tableBody = document.getElementById('dataTable');
     const form = document.getElementById('entryForm');
+    let allData = [];
+    let assetCorrection = {}; // { 'YYYY-MM': +-값 }
+    let initialAsset = 0; // 최초 자산 입력 (연말 계산용)
 
     function updateSubCategories() {
       const selected = mainSelect.value;
@@ -55,18 +67,28 @@
         subSelect.appendChild(opt);
       });
     }
-
     mainSelect.addEventListener('change', updateSubCategories);
     window.onload = updateSubCategories;
 
+    // 입력 이벤트
     form.addEventListener('submit', e => {
       e.preventDefault();
       const date = document.getElementById('date').value;
       const main = mainSelect.value;
       const sub = subSelect.value;
-      const amount = document.getElementById('amount').value;
+      const amount = Number(document.getElementById('amount').value);
       const note = document.getElementById('note').value;
+      allData.push({ date, main, sub, amount, note });
+      addRow(date, main, sub, amount, note);
+      updateMonthlySummary();
+      updateCharts();
+      updateAnnualSummary();
+      form.reset();
+      updateSubCategories();
+    });
 
+    // 표에 행 추가
+    function addRow(date, main, sub, amount, note) {
       const row = document.createElement('tr');
       [date, main, sub, amount, note].forEach(val => {
         const cell = document.createElement('td');
@@ -74,10 +96,159 @@
         row.appendChild(cell);
       });
       tableBody.appendChild(row);
+    }
 
-      form.reset();
-      updateSubCategories();
-    });
+    // --- 월별 집계 & 수동입력 ---
+    function updateMonthlySummary() {
+      // 월별 합계 계산
+      let summary = {};
+      allData.forEach(item => {
+        if (!item.date) return;
+        const month = item.date.slice(0, 7);
+        if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0, 자산조정:assetCorrection[month]||0 };
+        summary[month][item.main] += item.main==='수입' ? Number(item.amount) : Number(item.amount);
+      });
+
+      // 표 출력
+      let html = `<table class="summary-table"><tr>
+      <th>월</th><th>소비합계</th><th>투자합계</th><th>수입합계</th><th>자산조정(+/-)</th><th>입력</th></tr>`;
+      Object.keys(summary).sort().forEach(month=>{
+        html += `<tr>
+        <td>${month}</td>
+        <td>${summary[month]['소비']||0}</td>
+        <td>${summary[month]['투자']||0}</td>
+        <td>${summary[month]['수입']||0}</td>
+        <td id="asset-corr-${month}">${summary[month].자산조정||0}</td>
+        <td>
+          <input class="asset-control" type="number" id="input-${month}" placeholder="+/-" value="${assetCorrection[month]||''}"/>
+          <button onclick="setAssetCorrection('${month}')">반영</button>
+        </td>
+        </tr>`;
+      });
+      html += `</table>`;
+      document.getElementById('monthlySummary').innerHTML = html;
+    }
+
+    // 자산조정 반영
+    window.setAssetCorrection = function(month) {
+      const v = Number(document.getElementById('input-'+month).value)||0;
+      assetCorrection[month]=v;
+      updateMonthlySummary();
+      updateAnnualSummary();
+      updateCharts();
+    };
+
+    // --- 월별 그래프 ---
+    let pieChart;
+    function updateCharts() {
+      const chartDiv = document.getElementById('charts');
+      chartDiv.innerHTML = '';
+      const summary = {};
+      allData.forEach(item=>{
+        if (!item.date) return;
+        const month = item.date.slice(0,7);
+        if (!summary[month]) summary[month] = {소비:0,투자:0,수입:0};
+        summary[month][item.main] += Number(item.amount);
+      });
+      Object.keys(summary).sort().forEach(month=>{
+        // 비율 데이터
+        const total = summary[month]['소비']+summary[month]['투자']+summary[month]['수입'];
+        const data = [
+          summary[month]['소비'],
+          summary[month]['투자'],
+          summary[month]['수입'],
+        ];
+        const colors = ['#ffb300','#82b1ff','#43a047'];
+        const canvas = document.createElement('canvas');
+        canvas.id = 'chart-'+month;
+        canvas.width = 300; canvas.height = 300;
+        chartDiv.appendChild(Object.assign(document.createElement('div'),{className:'chart-area',innerHTML:`<h4>${month} 소비/투자/수입 비율</h4>`}));
+        chartDiv.lastChild.appendChild(canvas);
+        new Chart(canvas.getContext('2d'),{
+          type:'pie',
+          data:{
+            labels:['소비','투자','수입'],
+            datasets:[{
+              data:data,
+              backgroundColor: colors
+            }]
+          },
+          options:{
+            plugins:{ legend:{position:'bottom'} }
+          }
+        });
+      });
+    }
+
+    // --- 연말 자산증감/그래프 ---
+    function updateAnnualSummary() {
+      // 연도별 누적자산 = 전년+수입-소비-투자+자산조정
+      let yearly = {};
+      let prev = initialAsset;
+      let months = Object.keys(assetCorrection).concat(allData.map(i=>i.date.slice(0,7)));
+      months = Array.from(new Set(months)).sort();
+      let yearAsset = {};
+      months.forEach(month=>{
+        const [y,m] = month.split('-');
+        if (!yearly[y]) yearly[y] = {소비:0,투자:0,수입:0,자산조정:0};
+      });
+      allData.forEach(item=>{
+        if (!item.date) return;
+        const [y,m] = item.date.split('-');
+        if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0,자산조정:0};
+        yearly[y][item.main] += Number(item.amount);
+      });
+      Object.keys(assetCorrection).forEach(month=>{
+        const [y,m] = month.split('-');
+        yearly[y].자산조정 += assetCorrection[month];
+      });
+      // 누적 자산
+      let asset = initialAsset;
+      let assetArr = [];
+      Object.keys(yearly).sort().forEach((year,i)=>{
+        asset += yearly[year].수입 - yearly[year].소비 - yearly[year].투자 + yearly[year].자산조정;
+        assetArr.push({year,asset});
+      });
+      // 작년대비 증가율
+      let html = `<h3>연말 자산 증감</h3>
+      <input type="number" placeholder="작년말 자산" id="initAsset" style="width:120px;" value="${initialAsset||''}" onchange="setInitAsset(this.value)"/>
+      <table class="summary-table"><tr>
+        <th>연도</th><th>연말 자산</th><th>작년 대비 증감(%)</th></tr>`;
+      assetArr.forEach((item,i)=>{
+        let diff = i>0 ? (((item.asset-assetArr[i-1].asset)/assetArr[i-1].asset)*100).toFixed(1)+'%' : '-';
+        html+= `<tr><td>${item.year}</td><td>${item.asset}</td><td>${diff}</td></tr>`;
+      });
+      html+=`</table>
+      <canvas id="assetChart" width="400" height="260"></canvas>`;
+      document.getElementById('annualSummary').innerHTML = html;
+      // 그래프
+      if (assetArr.length>0){
+        new Chart(document.getElementById('assetChart').getContext('2d'),{
+          type:'line',
+          data:{
+            labels: assetArr.map(x=>x.year),
+            datasets:[{
+              label:'연말 자산',
+              data: assetArr.map(x=>x.asset),
+              fill:false, borderColor:'#42a5f5', tension:0.2
+            }]
+          },
+          options:{
+            plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true}}
+          }
+        });
+      }
+    }
+    window.setInitAsset=function(v){
+      initialAsset=Number(v)||0;
+      updateAnnualSummary();
+    }
+
+    // --- 초기 로딩시 표와 집계 갱신 ---
+    updateMonthlySummary();
+    updateCharts();
+    updateAnnualSummary();
   </script>
 </body>
 </html>
