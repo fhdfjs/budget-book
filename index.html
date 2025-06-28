@@ -66,7 +66,12 @@
       });
     }
     mainSelect.addEventListener('change', updateSubCategories);
-    window.onload = updateSubCategories;
+    window.onload = function() {
+      updateSubCategories();
+      updateMonthlySummary();
+      updateCharts();
+      updateAnnualSummary();
+    };
 
     // 입력 이벤트
     form.addEventListener('submit', e => {
@@ -174,11 +179,78 @@
     function updateAnnualSummary() {
       // 연도별 누적자산 = 전년+수입-소비-투자
       let yearly = {};
-      let months = allData.map(i=>i.date.slice(0,7));
-      months = Array.from(new Set(months)).sort();
-      let yearAsset = {};
       allData.forEach(item=>{
         if (!item.date) return;
-        const [y,m] = item.date.split('-');
+        const [y] = item.date.split('-');
         if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0};
-        yearly[y][item.main] += Number(item
+        yearly[y][item.main] += Number(item.amount);
+      });
+
+      let years = Object.keys(yearly).sort();
+      let assetArr = [];
+      let yearSum = {};
+      let prev = initialAsset;
+      let html = "";
+      years.forEach(y=>{
+        let 소비 = yearly[y].소비||0, 투자=yearly[y].투자||0, 수입=yearly[y].수입||0;
+        let sum = 수입 - (소비 + 투자);
+        yearSum[y] = sum;
+        prev += sum;
+        assetArr.push(prev);
+      });
+      if (years.length === 0) {
+        document.getElementById('annualSummary').innerHTML = "";
+        return;
+      }
+
+      html += `<h3>📈 연말 자산변동</h3>`;
+      html += `<table class="summary-table"><tr>
+        <th>연도</th><th>자산증감(₩)</th><th>누적자산(₩)</th></tr>`;
+      prev = initialAsset;
+      years.forEach((y,i)=>{
+        let sum = yearSum[y];
+        prev += sum;
+        html += `<tr>
+          <td>${y}</td>
+          <td>${sum>=0?"+":""}${sum}</td>
+          <td>${prev}</td>
+        </tr>`;
+      });
+      html += `</table>`;
+
+      // 그래프
+      html += `<canvas id="assetChart" width="400" height="260"></canvas>`;
+      document.getElementById('annualSummary').innerHTML = html;
+
+      // 차트
+      const ctx = document.getElementById('assetChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [{
+            label: '누적자산(₩)',
+            data: assetArr,
+            fill: false,
+            borderColor: '#42a5f5',
+            tension: 0.1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+
+      // 메시지
+      if (years.length > 1) {
+        let last = assetArr[assetArr.length-1], prevY = assetArr[assetArr.length-2];
+        let pct = prevY===0 ? 0 : ((last-prevY)/Math.abs(prevY)*100).toFixed(1);
+        html += `<p><b>연말 메시지:</b> 올해 자산은 작년 대비 <b>${pct}% ${last-prevY>=0?'증가':'감소'}</b>했습니다.</p>`;
+        document.getElementById('annualSummary').innerHTML = html;
+      }
+    }
+  </script>
+</body>
+</html>
