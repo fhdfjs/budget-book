@@ -7,28 +7,170 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <style>
-    body { font-family: sans-serif; transition: background 0.5s; }
-    .container { max-width: 1200px; margin: auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 20px; }
-    .season-info { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
-    .season-info img { width: 50px; height: 50px; }
-    #seasonFoods span { background-color: rgba(255,255,255,0.6); padding: 5px 10px; border-radius: 15px; margin: 0 4px; font-size: 0.9em; }
-    .calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    #calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-    .calendar-header, .calendar-day { padding: 10px; text-align: center; border-radius: 5px; }
-    .calendar-header { background-color: #f0f0f0; font-weight: bold; }
-    .calendar-day { background-color: #fff; cursor: pointer; }
-    .calendar-day.empty { background-color: transparent; cursor: default; }
-    .calendar-day:hover { background-color: #e0e0e0; }
-    .calendar-day.today { border: 2px solid #42a5f5; font-weight: bold; }
-    .calendar-day.has-data { color: #d32f2f; }
-    #entryBox { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 100; width: 90%; max-width: 500px; }
-    #entryForm { display: flex; flex-direction: column; gap: 10px; }
-    .summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-    .summary-table th { background-color: #f2f2f2; text-align: center; }
-    .charts-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
-    .chart-area { text-align: center; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      transition: background 0.5s; 
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7f6;
+    }
+    .container { 
+      max-width: 1200px; 
+      margin: auto; 
+      padding: 20px; 
+    }
+    .header { 
+      text-align: center; 
+      margin-bottom: 20px; 
+      background: rgba(255, 255, 255, 0.7);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .season-info { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 15px; 
+      margin-bottom: 20px; 
+    }
+    .season-info img { 
+      width: 50px; 
+      height: 50px; 
+    }
+    #seasonFoods span { 
+      background-color: rgba(0,0,0,0.05); 
+      padding: 5px 10px; 
+      border-radius: 15px; 
+      margin: 0 4px; 
+      font-size: 0.9em; 
+      display: inline-block;
+      margin-top: 5px;
+    }
+    .calendar-controls { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 10px; 
+    }
+    .calendar-controls button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .calendar-controls button:hover {
+      background-color: #0056b3;
+    }
+    #calendar { 
+      display: grid; 
+      grid-template-columns: repeat(7, 1fr); 
+      gap: 5px; 
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .calendar-header, .calendar-day { 
+      padding: 10px; 
+      text-align: center; 
+      border-radius: 5px; 
+    }
+    .calendar-header { 
+      background-color: #f0f0f0; 
+      font-weight: bold; 
+    }
+    .calendar-day { 
+      background-color: #fff; 
+      cursor: pointer; 
+      border: 1px solid #eee;
+      min-height: 60px;
+    }
+    .calendar-day:hover { 
+      background-color: #e9ecef; 
+    }
+    .calendar-day.empty { 
+      background-color: transparent; 
+      cursor: default; 
+      border: none;
+    }
+    .calendar-day.today { 
+      border: 2px solid #42a5f5; 
+      font-weight: bold; 
+    }
+    .calendar-day.has-data { 
+      font-weight: bold;
+      color: #d32f2f; 
+    }
+    #entryBox { 
+      display: none; 
+      position: fixed; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      background: white; 
+      padding: 25px; 
+      border-radius: 10px; 
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+      z-index: 100; 
+      width: 90%; 
+      max-width: 500px; 
+    }
+    #entryForm { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
+    }
+    #entryForm input, #entryForm select, #entryForm button {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    #entryForm button {
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .summary-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .summary-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 10px; 
+    }
+    .summary-table th, .summary-table td { 
+      border: 1px solid #ddd; 
+      padding: 8px; 
+      text-align: right; 
+    }
+    .summary-table th { 
+      background-color: #f2f2f2; 
+      text-align: center; 
+    }
+    .charts-container { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 20px; 
+      justify-content: center; 
+      margin-top: 20px; 
+    }
+    .chart-area { 
+      text-align: center; 
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 30px 0;
+    }
   </style>
 </head>
 <body>
@@ -51,12 +193,16 @@
     
     <main>
       <div id="calendar"></div>
-      <hr style="margin: 30px 0;">
-      <div id="monthlySummary"></div>
-      <hr style="margin: 30px 0;">
-      <div id="annualSummary"></div>
-      <hr style="margin: 30px 0;">
-      <div class="charts-container" id="charts"></div>
+      
+      <div class="summary-section" id="monthlySummary"></div>
+
+      <div class="summary-section" id="annualSummary"></div>
+      
+      <div class="summary-section">
+        <h3>월별 상세 차트</h3>
+        <div class="charts-container" id="charts"></div>
+      </div>
+
     </main>
   </div>
 
@@ -143,4 +289,239 @@
         calendar.appendChild(hd);
       }
       let firstDay = new Date(year, month, 1).getDay();
-      let lastDate = new Date(year, month+
+      let lastDate = new Date(year, month+1, 0).getDate();
+      for(let i=0; i<firstDay; i++) {
+        let emp = document.createElement('div');
+        emp.className = 'calendar-day empty';
+        calendar.appendChild(emp);
+      }
+      for(let date=1; date<=lastDate; date++) {
+        let key = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+        let hasData = allData[key] && allData[key].length>0;
+        let cell = document.createElement('div');
+        cell.className = 'calendar-day' + 
+          (today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===date?' today':'') +
+          (hasData?' has-data':'');
+        
+        let dateSpan = document.createElement('span');
+        dateSpan.textContent = date;
+        cell.appendChild(dateSpan);
+        if(hasData) {
+            let dot = document.createElement('div');
+            dot.textContent = '●';
+            dot.style.fontSize = '0.7em';
+            cell.appendChild(dot);
+        }
+
+        cell.onclick = () => showEntryBox(key, year, month, date);
+        calendar.appendChild(cell);
+      }
+      updateMonthlySummary();
+      updateCharts();
+      updateAnnualSummary();
+    }
+
+    function showEntryBox(key, year, month, date) {
+      document.getElementById('entryBox').style.display = 'block';
+      document.getElementById('selectedDate').textContent = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')} 내역`;
+      renderEntryTable(key);
+
+      const form = document.getElementById('entryForm');
+      form.onsubmit = null; 
+      
+      form.onsubmit = function(e){
+        e.preventDefault();
+        const main = document.getElementById('mainCategory').value;
+        const sub = document.getElementById('subCategory').value;
+        const amount = Number(document.getElementById('amount').value);
+        const note = document.getElementById('note').value;
+        if(!allData[key]) allData[key] = [];
+        allData[key].push({main,sub,amount,note});
+        renderEntryTable(key);
+        renderCalendar(currentYear, currentMonth);
+        this.reset();
+        updateSubCategories();
+      };
+
+      document.getElementById('closeEntry').onclick = () => {
+        document.getElementById('entryBox').style.display = 'none';
+      };
+      document.getElementById('mainCategory').onchange = updateSubCategories;
+      updateSubCategories();
+    }
+    function updateSubCategories() {
+      const main = document.getElementById('mainCategory').value;
+      const subSel = document.getElementById('subCategory');
+      subSel.innerHTML = '';
+      for(let sub of subCategories[main]) {
+        let opt = document.createElement('option');
+        opt.value = sub; opt.textContent = sub;
+        subSel.appendChild(opt);
+      }
+    }
+    function renderEntryTable(key) {
+      const table = document.getElementById('dataTable');
+      table.innerHTML = '';
+      (allData[key]||[]).forEach((item, idx)=>{
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${item.main}</td><td>${item.sub}</td><td>${item.amount.toLocaleString()}</td><td>${item.note}</td>
+        <td><button onclick="deleteEntry('${key}',${idx})">삭제</button></td>`;
+        table.appendChild(tr);
+      });
+    }
+    window.deleteEntry = function(key, idx){
+      if(confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+        if(allData[key]) {
+          allData[key].splice(idx,1);
+          renderEntryTable(key);
+          renderCalendar(currentYear, currentMonth);
+        }
+      }
+    }
+    document.getElementById('prevMonth').onclick = () => {
+      currentMonth--;
+      if(currentMonth<0) { currentMonth=11; currentYear--; }
+      renderCalendar(currentYear, currentMonth);
+      document.getElementById('entryBox').style.display = 'none';
+    };
+    document.getElementById('nextMonth').onclick = () => {
+      currentMonth++;
+      if(currentMonth>11) { currentMonth=0; currentYear++; }
+      renderCalendar(currentYear, currentMonth);
+      document.getElementById('entryBox').style.display = 'none';
+    };
+
+    function updateMonthlySummary() {
+      const monthlySummaryDiv = document.getElementById('monthlySummary');
+      let summary = {};
+      Object.entries(allData).forEach(([date, arr])=>{
+        const month = date.slice(0,7);
+        if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
+        arr.forEach(item=>{
+          summary[month][item.main] += Number(item.amount);
+        });
+      });
+      
+      let html = `<h3>월별 요약</h3>`;
+      if (Object.keys(summary).length === 0) {
+        monthlySummaryDiv.innerHTML = html + "<p>데이터가 없습니다.</p>";
+        return;
+      }
+
+      html += `<table class="summary-table"><tr><th>월</th><th>소비</th><th>투자</th><th>수입</th><th>잉여금</th></tr>`;
+      Object.keys(summary).sort().forEach(month=>{
+        let 소비 = summary[month]['소비']||0;
+        let 투자 = summary[month]['투자']||0;
+        let 수입 = summary[month]['수입']||0;
+        let 잉여금 = 수입 - (소비 + 투자);
+        html += `<tr><td>${month}</td><td>${소비.toLocaleString()}</td><td>${투자.toLocaleString()}</td><td>${수입.toLocaleString()}</td><td>${잉여금.toLocaleString()}</td></tr>`;
+      });
+      html += `</table>`;
+      monthlySummaryDiv.innerHTML = html;
+    }
+    function updateCharts() {
+      const chartDiv = document.getElementById('charts');
+      chartDiv.innerHTML = '';
+      const summary = {};
+      Object.entries(allData).forEach(([date, arr])=>{
+        const month = date.slice(0,7);
+        if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
+        arr.forEach(item=>{
+          summary[month][item.main] += Number(item.amount);
+        });
+      });
+      Object.keys(summary).sort().forEach(month=>{
+        const data = [ summary[month]['소비'], summary[month]['투자'], summary[month]['수입'], ];
+        if (data.every(item => item === 0)) return;
+
+        const colors = ['#ffb300','#82b1ff','#43a047'];
+        const canvas = document.createElement('canvas');
+        canvas.id = 'chart-'+month;
+        const chartArea = document.createElement('div');
+        chartArea.className = 'chart-area';
+        chartArea.innerHTML = `<h4>${month} 소비/투자/수입 비율</h4>`;
+        chartArea.appendChild(canvas);
+        chartDiv.appendChild(chartArea);
+
+        new Chart(canvas.getContext('2d'),{
+          type:'pie',
+          data:{
+            labels:['소비','투자','수입'],
+            datasets:[{ data:data, backgroundColor: colors }]
+          },
+          options:{ responsive: true, maintainAspectRatio: false, plugins:{ legend:{position:'bottom'} } }
+        });
+      });
+    }
+
+    function updateAnnualSummary() {
+      const annualSummaryDiv = document.getElementById('annualSummary');
+      let yearly = {};
+      Object.entries(allData).forEach(([date, arr])=>{
+        const [y] = date.split('-');
+        if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0};
+        arr.forEach(item=>{
+          yearly[y][item.main] += Number(item.amount);
+        });
+      });
+
+      let html = `<h3>📈 연말 자산변동</h3>`;
+      if (Object.keys(yearly).length === 0) {
+        annualSummaryDiv.innerHTML = html + "<p>데이터가 없습니다.</p>";
+        return;
+      }
+      
+      annualSummaryDiv.innerHTML = html;
+
+      let years = Object.keys(yearly).sort();
+      let assetArr = [];
+      let yearSum = {};
+      let prevAsset = initialAsset;
+      
+      let tableHtml = `<table class="summary-table"><tr><th>연도</th><th>자산증감(₩)</th><th>누적자산(₩)</th></tr>`;
+      years.forEach(y=>{
+        let 소비 = yearly[y].소비||0, 투자=yearly[y].투자||0, 수입=yearly[y].수입||0;
+        let sum = 수입 - (소비 + 투자);
+        yearSum[y] = sum;
+        prevAsset += sum;
+        assetArr.push(prevAsset);
+        tableHtml += `<tr><td>${y}</td><td>${sum>=0?"+":""}${sum.toLocaleString()}</td><td>${prevAsset.toLocaleString()}</td></tr>`;
+      });
+      tableHtml += `</table>`;
+      
+      annualSummaryDiv.innerHTML += tableHtml;
+      
+      const canvas = document.createElement('canvas');
+      canvas.id = 'assetChart';
+      canvas.height = 200; // 높이 조정
+      annualSummaryDiv.appendChild(canvas);
+
+      new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [{
+            label: '누적자산(₩)', data: assetArr, fill: false,
+            borderColor: '#42a5f5', tension: 0.1
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      if (years.length > 1) {
+        let last = assetArr[assetArr.length-1], prevY = assetArr[assetArr.length-2];
+        let pct = prevY===0 ? 100 : ((last-prevY)/Math.abs(prevY)*100).toFixed(1);
+        if (prevY === 0 && last > 0) pct = "100.0"; 
+
+        const msgP = document.createElement('p');
+        msgP.innerHTML = `<br><b>연말 메시지:</b> 올해 자산은 작년 대비 <b>${pct}% ${last-prevY>=0?'증가':'감소'}</b>했습니다.`;
+        annualSummaryDiv.appendChild(msgP);
+      }
+    }
+
+    // 초기화
+    renderCalendar(currentYear, currentMonth);
+  </script>
+
+</body>
+</html>
