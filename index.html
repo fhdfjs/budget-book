@@ -231,37 +231,18 @@
   <script>
     // 1. 계절/제철 식품/이미지/파스텔톤
     const SEASON_MAP = [
-      {
-        name: "봄", months: [3,4,5], bg: "#ffeef7",
-        img: "https://openmoji.org/data/color/svg/1F353.svg", 
-        foods: ["딸기🍓", "두릅", "쑥", "달래", "미나리"]
-      },
-      {
-        name: "여름", months: [6,7,8], bg: "#e3faff",
-        img: "https://openmoji.org/data/color/svg/1F349.svg",
-        foods: ["수박🍉", "참외", "옥수수🌽", "오이🥒"]
-      },
-      {
-        name: "가을", months: [9,10,11], bg: "#fff7e3",
-        img: "https://openmoji.org/data/color/svg/1F34E.svg",
-        foods: ["밤🌰", "감", "사과🍎", "고구마", "버섯"]
-      },
-      {
-        name: "겨울", months: [12,1,2], bg: "#eaf3ff",
-        img: "https://openmoji.org/data/color/svg/1F34A.svg",
-        foods: ["귤🍊", "배추", "무", "대파", "방어🐟"]
-      }
+      { name: "봄", months: [3,4,5], bg: "#ffeef7", img: "https://openmoji.org/data/color/svg/1F353.svg", foods: ["딸기🍓", "두릅", "쑥", "달래", "미나리"] },
+      { name: "여름", months: [6,7,8], bg: "#e3faff", img: "https://openmoji.org/data/color/svg/1F349.svg", foods: ["수박🍉", "참외", "옥수수🌽", "오이🥒"] },
+      { name: "가을", months: [9,10,11], bg: "#fff7e3", img: "https://openmoji.org/data/color/svg/1F34E.svg", foods: ["밤🌰", "감", "사과🍎", "고구마", "버섯"] },
+      { name: "겨울", months: [12,1,2], bg: "#eaf3ff", img: "https://openmoji.org/data/color/svg/1F34A.svg", foods: ["귤🍊", "배추", "무", "대파", "방어🐟"] }
     ];
-    function getSeason(month) {
-      return SEASON_MAP.find(season => season.months.includes(month));
-    }
+    function getSeason(month) { return SEASON_MAP.find(season => season.months.includes(month)); }
     function updateSeasonUI(month) {
       const season = getSeason(month);
       document.body.style.background = season.bg;
       document.getElementById('seasonImg').src = season.img;
       document.getElementById('seasonText').textContent = `${season.name}의 제철`;
-      document.getElementById('seasonFoods').innerHTML =
-        season.foods.map(f => `<span>${f}</span>`).join('');
+      document.getElementById('seasonFoods').innerHTML = season.foods.map(f => `<span>${f}</span>`).join('');
     }
 
     // 2. 가계부/달력 기본
@@ -272,8 +253,8 @@
     };
     const today = new Date();
     let currentYear = today.getFullYear();
-    let currentMonth = today.getMonth(); // 0-indexed
-    let allData = {}; // {'YYYY-MM-DD': [{main,sub,amount,note}]}
+    let currentMonth = today.getMonth();
+    let allData = {};
     let initialAsset = 0;
 
     function renderCalendar(year, month) {
@@ -282,37 +263,22 @@
       calendar.innerHTML = '';
       document.getElementById('monthTitle').textContent = `${year}년 ${month+1}월`;
       const weekDays = ['일','월','화','수','목','금','토'];
-      for(let d of weekDays) {
+      weekDays.forEach(d => {
         let hd = document.createElement('div');
-        hd.className = 'calendar-header';
-        hd.textContent = d;
-        calendar.appendChild(hd);
-      }
+        hd.className = 'calendar-header'; hd.textContent = d; calendar.appendChild(hd);
+      });
       let firstDay = new Date(year, month, 1).getDay();
       let lastDate = new Date(year, month+1, 0).getDate();
       for(let i=0; i<firstDay; i++) {
-        let emp = document.createElement('div');
-        emp.className = 'calendar-day empty';
-        calendar.appendChild(emp);
+        let emp = document.createElement('div'); emp.className = 'calendar-day empty'; calendar.appendChild(emp);
       }
       for(let date=1; date<=lastDate; date++) {
         let key = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
         let hasData = allData[key] && allData[key].length>0;
         let cell = document.createElement('div');
-        cell.className = 'calendar-day' + 
-          (today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===date?' today':'') +
-          (hasData?' has-data':'');
-        
-        let dateSpan = document.createElement('span');
-        dateSpan.textContent = date;
-        cell.appendChild(dateSpan);
-        if(hasData) {
-            let dot = document.createElement('div');
-            dot.textContent = '●';
-            dot.style.fontSize = '0.7em';
-            cell.appendChild(dot);
-        }
-
+        cell.className = 'calendar-day' + (today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===date?' today':'') + (hasData?' has-data':'');
+        let dateSpan = document.createElement('span'); dateSpan.textContent = date; cell.appendChild(dateSpan);
+        if(hasData) { let dot = document.createElement('div'); dot.textContent = '●'; dot.style.fontSize = '0.7em'; cell.appendChild(dot); }
         cell.onclick = () => showEntryBox(key, year, month, date);
         calendar.appendChild(cell);
       }
@@ -325,10 +291,8 @@
       document.getElementById('entryBox').style.display = 'block';
       document.getElementById('selectedDate').textContent = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')} 내역`;
       renderEntryTable(key);
-
       const form = document.getElementById('entryForm');
       form.onsubmit = null; 
-      
       form.onsubmit = function(e){
         e.preventDefault();
         const main = document.getElementById('mainCategory').value;
@@ -342,10 +306,7 @@
         this.reset();
         updateSubCategories();
       };
-
-      document.getElementById('closeEntry').onclick = () => {
-        document.getElementById('entryBox').style.display = 'none';
-      };
+      document.getElementById('closeEntry').onclick = () => { document.getElementById('entryBox').style.display = 'none'; };
       document.getElementById('mainCategory').onchange = updateSubCategories;
       updateSubCategories();
     }
@@ -353,11 +314,9 @@
       const main = document.getElementById('mainCategory').value;
       const subSel = document.getElementById('subCategory');
       subSel.innerHTML = '';
-      for(let sub of subCategories[main]) {
-        let opt = document.createElement('option');
-        opt.value = sub; opt.textContent = sub;
-        subSel.appendChild(opt);
-      }
+      subCategories[main].forEach(sub => {
+        let opt = document.createElement('option'); opt.value = sub; opt.textContent = sub; subSel.appendChild(opt);
+      });
     }
     function renderEntryTable(key) {
       const table = document.getElementById('dataTable');
@@ -379,16 +338,12 @@
       }
     }
     document.getElementById('prevMonth').onclick = () => {
-      currentMonth--;
-      if(currentMonth<0) { currentMonth=11; currentYear--; }
-      renderCalendar(currentYear, currentMonth);
-      document.getElementById('entryBox').style.display = 'none';
+      currentMonth--; if(currentMonth<0) { currentMonth=11; currentYear--; }
+      renderCalendar(currentYear, currentMonth); document.getElementById('entryBox').style.display = 'none';
     };
     document.getElementById('nextMonth').onclick = () => {
-      currentMonth++;
-      if(currentMonth>11) { currentMonth=0; currentYear++; }
-      renderCalendar(currentYear, currentMonth);
-      document.getElementById('entryBox').style.display = 'none';
+      currentMonth++; if(currentMonth>11) { currentMonth=0; currentYear++; }
+      renderCalendar(currentYear, currentMonth); document.getElementById('entryBox').style.display = 'none';
     };
 
     function updateMonthlySummary() {
@@ -397,22 +352,15 @@
       Object.entries(allData).forEach(([date, arr])=>{
         const month = date.slice(0,7);
         if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
-        arr.forEach(item=>{
-          summary[month][item.main] += Number(item.amount);
-        });
+        arr.forEach(item=>{ summary[month][item.main] += Number(item.amount); });
       });
-      
       let html = `<h3>월별 요약</h3>`;
       if (Object.keys(summary).length === 0) {
-        monthlySummaryDiv.innerHTML = html + "<p>데이터가 없습니다.</p>";
-        return;
+        monthlySummaryDiv.innerHTML = html + "<p>데이터가 없습니다.</p>"; return;
       }
-
       html += `<table class="summary-table"><tr><th>월</th><th>소비</th><th>투자</th><th>수입</th><th>잉여금</th></tr>`;
       Object.keys(summary).sort().forEach(month=>{
-        let 소비 = summary[month]['소비']||0;
-        let 투자 = summary[month]['투자']||0;
-        let 수입 = summary[month]['수입']||0;
+        let 소비 = summary[month]['소비']||0, 투자 = summary[month]['투자']||0, 수입 = summary[month]['수입']||0;
         let 잉여금 = 수입 - (소비 + 투자);
         html += `<tr><td>${month}</td><td>${소비.toLocaleString()}</td><td>${투자.toLocaleString()}</td><td>${수입.toLocaleString()}</td><td>${잉여금.toLocaleString()}</td></tr>`;
       });
@@ -426,97 +374,70 @@
       Object.entries(allData).forEach(([date, arr])=>{
         const month = date.slice(0,7);
         if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
-        arr.forEach(item=>{
-          summary[month][item.main] += Number(item.amount);
-        });
+        arr.forEach(item=>{ summary[month][item.main] += Number(item.amount); });
       });
       Object.keys(summary).sort().forEach(month=>{
-        const data = [ summary[month]['소비'], summary[month]['투자'], summary[month]['수입'], ];
+        const data = [ summary[month]['소비'], summary[month]['투자'], summary[month]['수입'] ];
         if (data.every(item => item === 0)) return;
-
         const colors = ['#ffb300','#82b1ff','#43a047'];
-        const canvas = document.createElement('canvas');
-        canvas.id = 'chart-'+month;
-        const chartArea = document.createElement('div');
-        chartArea.className = 'chart-area';
-        chartArea.innerHTML = `<h4>${month} 소비/투자/수입 비율</h4>`;
-        chartArea.appendChild(canvas);
+        const canvas = document.createElement('canvas'); canvas.id = 'chart-'+month;
+        const chartArea = document.createElement('div'); chartArea.className = 'chart-area';
+        chartArea.innerHTML = `<h4>${month} 소비/투자/수입 비율</h4>`; chartArea.appendChild(canvas);
         chartDiv.appendChild(chartArea);
-
-        new Chart(canvas.getContext('2d'),{
-          type:'pie',
-          data:{
-            labels:['소비','투자','수입'],
-            datasets:[{ data:data, backgroundColor: colors }]
-          },
-          options:{ responsive: true, maintainAspectRatio: false, plugins:{ legend:{position:'bottom'} } }
-        });
+        new Chart(canvas.getContext('2d'),{ type:'pie', data:{ labels:['소비','투자','수입'], datasets:[{ data:data, backgroundColor: colors }] }, options:{ responsive: true, maintainAspectRatio: false, plugins:{ legend:{position:'bottom'} } } });
       });
     }
 
+    // ==========================================================
+    // ✨✨✨ 요청하신 대로 수정된 함수입니다 ✨✨✨
+    // ==========================================================
     function updateAnnualSummary() {
       const annualSummaryDiv = document.getElementById('annualSummary');
       let yearly = {};
-      Object.entries(allData).forEach(([date, arr])=>{
+      Object.entries(allData).forEach(([date, arr]) => {
         const [y] = date.split('-');
-        if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0};
-        arr.forEach(item=>{
+        if (!yearly[y]) yearly[y] = { 소비: 0, 투자: 0, 수입: 0 };
+        arr.forEach(item => {
           yearly[y][item.main] += Number(item.amount);
         });
       });
 
-      let html = `<h3>📈 연말 자산변동</h3>`;
-      if (Object.keys(yearly).length === 0) {
+      let html = `<h3>📈 연간 요약</h3>`;
+      
+      const years = Object.keys(yearly);
+      if (years.length === 0) {
         annualSummaryDiv.innerHTML = html + "<p>데이터가 없습니다.</p>";
         return;
       }
       
+      // '누적자산'을 빼고 '총수입', '총지출', '자산증감'으로 테이블 헤더 변경
+      html += `<table class="summary-table">
+                 <tr>
+                   <th>연도</th>
+                   <th>총수입</th>
+                   <th>총지출</th>
+                   <th>자산증감</th>
+                 </tr>`;
+
+      years.sort().forEach(y => {
+        const 수입 = yearly[y].수입 || 0;
+        const 소비 = yearly[y].소비 || 0;
+        const 투자 = yearly[y].투자 || 0;
+        const 총지출 = 소비 + 투자; // 총지출 계산
+        const 자산증감 = 수입 - 총지출; // 자산증감 계산
+
+        // 새로운 구조로 테이블 행 추가
+        html += `<tr>
+                   <td>${y}</td>
+                   <td>${수입.toLocaleString()}</td>
+                   <td>${총지출.toLocaleString()}</td>
+                   <td>${자산증감 >= 0 ? "+" : ""}${자산증감.toLocaleString()}</td>
+                 </tr>`;
+      });
+
+      html += `</table>`;
       annualSummaryDiv.innerHTML = html;
-
-      let years = Object.keys(yearly).sort();
-      let assetArr = [];
-      let yearSum = {};
-      let prevAsset = initialAsset;
-      
-      let tableHtml = `<table class="summary-table"><tr><th>연도</th><th>자산증감(₩)</th><th>누적자산(₩)</th></tr>`;
-      years.forEach(y=>{
-        let 소비 = yearly[y].소비||0, 투자=yearly[y].투자||0, 수입=yearly[y].수입||0;
-        let sum = 수입 - (소비 + 투자);
-        yearSum[y] = sum;
-        prevAsset += sum;
-        assetArr.push(prevAsset);
-        tableHtml += `<tr><td>${y}</td><td>${sum>=0?"+":""}${sum.toLocaleString()}</td><td>${prevAsset.toLocaleString()}</td></tr>`;
-      });
-      tableHtml += `</table>`;
-      
-      annualSummaryDiv.innerHTML += tableHtml;
-      
-      const canvas = document.createElement('canvas');
-      canvas.id = 'assetChart';
-      canvas.height = 200; // 높이 조정
-      annualSummaryDiv.appendChild(canvas);
-
-      new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: years,
-          datasets: [{
-            label: '누적자산(₩)', data: assetArr, fill: false,
-            borderColor: '#42a5f5', tension: 0.1
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      if (years.length > 1) {
-        let last = assetArr[assetArr.length-1], prevY = assetArr[assetArr.length-2];
-        let pct = prevY===0 ? 100 : ((last-prevY)/Math.abs(prevY)*100).toFixed(1);
-        if (prevY === 0 && last > 0) pct = "100.0"; 
-
-        const msgP = document.createElement('p');
-        msgP.innerHTML = `<br><b>연말 메시지:</b> 올해 자산은 작년 대비 <b>${pct}% ${last-prevY>=0?'증가':'감소'}</b>했습니다.`;
-        annualSummaryDiv.appendChild(msgP);
-      }
+      // 차트 및 연말 메시지 관련 코드는 모두 제거되었습니다.
     }
 
     // 초기화
