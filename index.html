@@ -1,401 +1,302 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <title>마스터의 달력형 가계부</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 40px;
-      transition: background 0.6s;
-    }
-    h1 { margin-bottom: 10px;}
-    #seasonBox {
-      text-align:center;
-      margin-bottom:28px;
-      padding:16px 0 10px 0;
-    }
-    #seasonImg {
-      height:65px;
-      vertical-align:middle;
-      filter: drop-shadow(0 4px 8px #0002);
-      margin-bottom:-10px;
-    }
-    #seasonFoods span {
-      display: inline-block;
-      font-size:1.2em;
-      padding: 3px 10px;
-      border-radius: 16px;
-      background: #fff6;
-      margin: 2px 6px 2px 0;
-      box-shadow: 0 2px 8px #0001;
-    }
-    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #eee; border:1px solid #ddd;}
-    .calendar-header, .calendar-day {
-      padding: 12px 0; text-align: center; background: #fff;
-    }
-    .calendar-header { font-weight:bold; background: #f6f6f6;}
-    .calendar-day.today { background: #ffe08c; }
-    .calendar-day.has-data { background: #fffae3; border: 1.5px solid #ffb300;}
-    .calendar-day:hover { background:#e0eaff; cursor:pointer; }
-    .calendar-day.empty { background: #f9f9f9; }
-    .summary-table { margin:30px 0; width:auto;}
-    #charts { display:flex; flex-wrap:wrap; gap:30px; margin-top:30px;}
-    .chart-area { width:340px; }
-    .entry-list table {width:100%; border-collapse:collapse;}
-    .entry-list th, .entry-list td { border:1px solid #ccc; padding:6px;}
-    .entry-list th {background:#fafafa;}
-    .input-area {margin:12px 0; display:flex; gap:8px;}
-    .input-area select, .input-area input {padding:5px;}
-    @media (max-width:600px) {
-      body { margin:6px; }
-      .calendar-header, .calendar-day { padding: 8px 0;}
-      #charts {flex-direction:column;}
-      .chart-area {width:100%;}
-    }
-  </style>
-</head>
-<body>
-  <h1>📅 마스터의 달력형 가계부</h1>
-  <!-- 계절/제철 식품 상단 안내 -->
-  <div id="seasonBox">
-    <img id="seasonImg" alt="계절 이미지">
-    <h2 id="seasonText" style="display:inline; font-size:1.25em; margin-left:8px;"></h2>
-    <div id="seasonFoods" style="margin-top:7px;"></div>
-  </div>
-  <div>
-    <button id="prevMonth">◀ 이전달</button>
-    <span id="monthTitle" style="font-size:1.2em;font-weight:bold;"></span>
-    <button id="nextMonth">다음달 ▶</button>
-  </div>
-  <div class="calendar" id="calendar"></div>
-
-  <div id="entryBox" style="display:none;">
-    <h3 id="selectedDate"></h3>
-    <form id="entryForm" class="input-area">
-      <select id="mainCategory" required>
-        <option value="소비">소비</option>
-        <option value="투자">투자</option>
-        <option value="수입">수입</option>
-      </select>
-      <select id="subCategory"></select>
-      <input type="number" id="amount" placeholder="금액" required/>
-      <input type="text" id="note" placeholder="메모"/>
-      <button type="submit">추가</button>
-      <button type="button" id="closeEntry">닫기</button>
-    </form>
-    <div class="entry-list">
-      <table>
-        <thead>
-          <tr><th>항목</th><th>하위항목</th><th>금액</th><th>메모</th><th></th></tr>
-        </thead>
-        <tbody id="dataTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div id="monthlySummary"></div>
-  <div id="charts"></div>
-  <div id="annualSummary"></div>
-
 <script>
-  // 1. 계절/제철 식품/이미지/파스텔톤
-  const SEASON_MAP = [
-    {
-      name: "봄",   // 3~5월
-      months: [3,4,5],
-      bg: "#ffeef7",
-      img: "https://openmoji.org/data/color/svg/1F353.svg", // 딸기
-      foods: ["딸기🍓", "두릅", "쑥", "달래", "미나리"]
-    },
-    {
-      name: "여름", // 6~8월
-      months: [6,7,8],
-      bg: "#e3faff",
-      img: "https://openmoji.org/data/color/svg/1F349.svg", // 수박
-      foods: ["수박🍉", "참외", "옥수수🌽", "오이🥒"]
-    },
-    {
-      name: "가을", // 9~11월
-      months: [9,10,11],
-      bg: "#fff7e3",
-      img: "https://openmoji.org/data/color/svg/1F34E.svg", // 사과
-      foods: ["밤🌰", "감", "사과🍎", "고구마", "버섯"]
-    },
-    {
-      name: "겨울", // 12,1,2월
-      months: [12,1,2],
-      bg: "#eaf3ff",
-      img: "https://openmoji.org/data/color/svg/1F34A.svg", // 귤
-      foods: ["귤🍊", "배추", "무", "대파", "방어🐟"]
-    }
-  ];
-  function getSeason(month) {
-    return SEASON_MAP.find(season => season.months.includes(month));
-  }
-  function updateSeasonUI(month) {
-    const season = getSeason(month);
-    document.body.style.background = season.bg;
-    document.getElementById('seasonImg').src = season.img;
-    document.getElementById('seasonText').textContent = `${season.name}의 제철`;
-    document.getElementById('seasonFoods').innerHTML =
-      season.foods.map(f => `<span>${f}</span>`).join('');
-  }
+  // 1. 계절/제철 식품/이미지/파스텔톤
+  const SEASON_MAP = [
+    {
+      name: "봄",   // 3~5월
+      months: [3,4,5],
+      bg: "#ffeef7",
+      img: "https://openmoji.org/data/color/svg/1F353.svg", // 딸기
+      foods: ["딸기🍓", "두릅", "쑥", "달래", "미나리"]
+    },
+    {
+      name: "여름", // 6~8월
+      months: [6,7,8],
+      bg: "#e3faff",
+      img: "https://openmoji.org/data/color/svg/1F349.svg", // 수박
+      foods: ["수박🍉", "참외", "옥수수🌽", "오이🥒"]
+    },
+    {
+      name: "가을", // 9~11월
+      months: [9,10,11],
+      bg: "#fff7e3",
+      img: "https://openmoji.org/data/color/svg/1F34E.svg", // 사과
+      foods: ["밤🌰", "감", "사과🍎", "고구마", "버섯"]
+    },
+    {
+      name: "겨울", // 12,1,2월
+      months: [12,1,2],
+      bg: "#eaf3ff",
+      img: "https://openmoji.org/data/color/svg/1F34A.svg", // 귤
+      foods: ["귤🍊", "배추", "무", "대파", "방어🐟"]
+    }
+  ];
+  function getSeason(month) {
+    return SEASON_MAP.find(season => season.months.includes(month));
+  }
+  function updateSeasonUI(month) {
+    const season = getSeason(month);
+    document.body.style.background = season.bg;
+    document.getElementById('seasonImg').src = season.img;
+    document.getElementById('seasonText').textContent = `${season.name}의 제철`;
+    document.getElementById('seasonFoods').innerHTML =
+      season.foods.map(f => `<span>${f}</span>`).join('');
+  }
 
-  // 2. 가계부/달력 기본
-  const subCategories = {
-    '소비': ['식비', '교통비', '고정지출', '공과금', '거주비용', '문화비', '자기개발비', '기타(소비)'],
-    '투자': ['적금', '보험', '주식', '가상화폐', '수집품', '기타(투자)'],
-    '수입': ['월급', '이자수입', '배당수입', '기타수입']
-  };
-  const today = new Date();
-  let currentYear = today.getFullYear();
-  let currentMonth = today.getMonth(); // 0-indexed
-  let allData = {}; // {'YYYY-MM-DD': [{main,sub,amount,note}]}
-  let initialAsset = 0;
+  // 2. 가계부/달력 기본
+  const subCategories = {
+    '소비': ['식비', '교통비', '고정지출', '공과금', '거주비용', '문화비', '자기개발비', '기타(소비)'],
+    '투자': ['적금', '보험', '주식', '가상화폐', '수집품', '기타(투자)'],
+    '수입': ['월급', '이자수입', '배당수입', '기타수입']
+  };
+  const today = new Date();
+  let currentYear = today.getFullYear();
+  let currentMonth = today.getMonth(); // 0-indexed
+  let allData = {}; // {'YYYY-MM-DD': [{main,sub,amount,note}]}
+  let initialAsset = 0;
 
-  // 달력 그리기
-  function renderCalendar(year, month) {
-    updateSeasonUI(month+1);
-    const calendar = document.getElementById('calendar');
-    calendar.innerHTML = '';
-    document.getElementById('monthTitle').textContent = `${year}년 ${month+1}월`;
-    const weekDays = ['일','월','화','수','목','금','토'];
-    for(let d of weekDays) {
-      let hd = document.createElement('div');
-      hd.className = 'calendar-header';
-      hd.textContent = d;
-      calendar.appendChild(hd);
-    }
-    let firstDay = new Date(year, month, 1).getDay();
-    let lastDate = new Date(year, month+1, 0).getDate();
-    // 앞 빈칸
-    for(let i=0; i<firstDay; i++) {
-      let emp = document.createElement('div');
-      emp.className = 'calendar-day empty';
-      calendar.appendChild(emp);
-    }
-    for(let date=1; date<=lastDate; date++) {
-      let day = new Date(year, month, date);
-      let key = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-      let hasData = allData[key] && allData[key].length>0;
-      let cell = document.createElement('div');
-      cell.className = 'calendar-day' + 
-        (today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===date?' today':'') +
-        (hasData?' has-data':'');
-      cell.textContent = date + (hasData?' ●':'');
-      cell.onclick = () => showEntryBox(key, year, month, date);
-      calendar.appendChild(cell);
-    }
-    updateMonthlySummary();
-    updateCharts();
-    updateAnnualSummary();
-  }
+  // 달력 그리기
+  function renderCalendar(year, month) {
+    updateSeasonUI(month+1);
+    const calendar = document.getElementById('calendar');
+    calendar.innerHTML = '';
+    document.getElementById('monthTitle').textContent = `${year}년 ${month+1}월`;
+    const weekDays = ['일','월','화','수','목','금','토'];
+    for(let d of weekDays) {
+      let hd = document.createElement('div');
+      hd.className = 'calendar-header';
+      hd.textContent = d;
+      calendar.appendChild(hd);
+    }
+    let firstDay = new Date(year, month, 1).getDay();
+    let lastDate = new Date(year, month+1, 0).getDate();
+    // 앞 빈칸
+    for(let i=0; i<firstDay; i++) {
+      let emp = document.createElement('div');
+      emp.className = 'calendar-day empty';
+      calendar.appendChild(emp);
+    }
+    for(let date=1; date<=lastDate; date++) {
+      let day = new Date(year, month, date);
+      let key = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+      let hasData = allData[key] && allData[key].length>0;
+      let cell = document.createElement('div');
+      cell.className = 'calendar-day' + 
+        (today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===date?' today':'') +
+        (hasData?' has-data':'');
+      cell.textContent = date + (hasData?' ●':'');
+      cell.onclick = () => showEntryBox(key, year, month, date);
+      calendar.appendChild(cell);
+    }
+    updateMonthlySummary();
+    updateCharts();
+    updateAnnualSummary();
+  }
 
-  // 입력박스 show/hide 및 데이터 채우기
-  function showEntryBox(key, year, month, date) {
-    document.getElementById('entryBox').style.display = 'block';
-    document.getElementById('selectedDate').textContent = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')} 내역`;
-    renderEntryTable(key);
+  // 입력박스 show/hide 및 데이터 채우기
+  function showEntryBox(key, year, month, date) {
+    document.getElementById('entryBox').style.display = 'block';
+    document.getElementById('selectedDate').textContent = `${year}-${String(month+1).padStart(2,'0')}-${String(date).padStart(2,'0')} 내역`;
+    renderEntryTable(key);
 
-    document.getElementById('entryForm').onsubmit = function(e){
-      e.preventDefault();
-      const main = document.getElementById('mainCategory').value;
-      const sub = document.getElementById('subCategory').value;
-      const amount = Number(document.getElementById('amount').value);
-      const note = document.getElementById('note').value;
-      if(!allData[key]) allData[key] = [];
-      allData[key].push({main,sub,amount,note});
-      renderEntryTable(key);
-      renderCalendar(currentYear, currentMonth);
-      this.reset();
-      updateSubCategories();
-    };
-    document.getElementById('closeEntry').onclick = () => {
-      document.getElementById('entryBox').style.display = 'none';
-    };
-    document.getElementById('mainCategory').onchange = updateSubCategories;
-    updateSubCategories();
-  }
-  function updateSubCategories() {
-    const main = document.getElementById('mainCategory').value;
-    const subSel = document.getElementById('subCategory');
-    subSel.innerHTML = '';
-    for(let sub of subCategories[main]) {
-      let opt = document.createElement('option');
-      opt.value = sub; opt.textContent = sub;
-      subSel.appendChild(opt);
-    }
-  }
-  function renderEntryTable(key) {
-    const table = document.getElementById('dataTable');
-    table.innerHTML = '';
-    (allData[key]||[]).forEach((item, idx)=>{
-      let tr = document.createElement('tr');
-      tr.innerHTML = `<td>${item.main}</td><td>${item.sub}</td><td>${item.amount}</td><td>${item.note}</td>
-      <td><button onclick="deleteEntry('${key}',${idx})">삭제</button></td>`;
-      table.appendChild(tr);
-    });
-  }
-  window.deleteEntry = function(key, idx){
-    if(allData[key]) {
-      allData[key].splice(idx,1);
-      renderEntryTable(key);
-      renderCalendar(currentYear, currentMonth);
-    }
-  }
-  document.getElementById('prevMonth').onclick = () => {
-    currentMonth--;
-    if(currentMonth<0) { currentMonth=11; currentYear--; }
-    renderCalendar(currentYear, currentMonth);
-    document.getElementById('entryBox').style.display = 'none';
-  };
-  document.getElementById('nextMonth').onclick = () => {
-    currentMonth++;
-    if(currentMonth>11) { currentMonth=0; currentYear++; }
-    renderCalendar(currentYear, currentMonth);
-    document.getElementById('entryBox').style.display = 'none';
-  };
+    const form = document.getElementById('entryForm');
+    // ✨✨✨ 수정된 부분: 이벤트 핸들러 중복 등록 방지 ✨✨✨
+    form.onsubmit = null; // 기존 핸들러를 초기화합니다.
+    
+    form.onsubmit = function(e){
+      e.preventDefault();
+      const main = document.getElementById('mainCategory').value;
+      const sub = document.getElementById('subCategory').value;
+      const amount = Number(document.getElementById('amount').value);
+      const note = document.getElementById('note').value;
+      if(!allData[key]) allData[key] = [];
+      allData[key].push({main,sub,amount,note});
+      renderEntryTable(key);
+      renderCalendar(currentYear, currentMonth);
+      this.reset();
+      updateSubCategories();
+    };
 
-  // 월별 집계 (소비/투자/수입/잉여금)
-  function updateMonthlySummary() {
-    let summary = {};
-    Object.entries(allData).forEach(([date, arr])=>{
-      const month = date.slice(0,7);
-      if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
-      arr.forEach(item=>{
-        summary[month][item.main] += Number(item.amount);
-      });
-    });
-    let html = `<table class="summary-table"><tr>
-      <th>월</th>
-      <th>소비</th>
-      <th>투자</th>
-      <th>수입</th>
-      <th>잉여금</th>
-    </tr>`;
-    Object.keys(summary).sort().forEach(month=>{
-      let 소비 = summary[month]['소비']||0;
-      let 투자 = summary[month]['투자']||0;
-      let 수입 = summary[month]['수입']||0;
-      let 잉여금 = 수입 - (소비 + 투자);
-      html += `<tr>
-        <td>${month}</td>
-        <td>${소비}</td>
-        <td>${투자}</td>
-        <td>${수입}</td>
-        <td>${잉여금}</td>
-      </tr>`;
-    });
-    html += `</table>`;
-    document.getElementById('monthlySummary').innerHTML = html;
-  }
-  function updateCharts() {
-    const chartDiv = document.getElementById('charts');
-    chartDiv.innerHTML = '';
-    const summary = {};
-    Object.entries(allData).forEach(([date, arr])=>{
-      const month = date.slice(0,7);
-      if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
-      arr.forEach(item=>{
-        summary[month][item.main] += Number(item.amount);
-      });
-    });
-    Object.keys(summary).sort().forEach(month=>{
-      const data = [
-        summary[month]['소비'],
-        summary[month]['투자'],
-        summary[month]['수입'],
-      ];
-      const colors = ['#ffb300','#82b1ff','#43a047'];
-      const canvas = document.createElement('canvas');
-      canvas.id = 'chart-'+month;
-      canvas.width = 300; canvas.height = 300;
-      chartDiv.appendChild(Object.assign(document.createElement('div'),{className:'chart-area',innerHTML:`<h4>${month} 소비/투자/수입 비율</h4>`}));
-      chartDiv.lastChild.appendChild(canvas);
-      new Chart(canvas.getContext('2d'),{
-        type:'pie',
-        data:{
-          labels:['소비','투자','수입'],
-          datasets:[{
-            data:data,
-            backgroundColor: colors
-          }]
-        },
-        options:{
-          plugins:{ legend:{position:'bottom'} }
-        }
-      });
-    });
-  }
-  function updateAnnualSummary() {
-    let yearly = {};
-    Object.entries(allData).forEach(([date, arr])=>{
-      const [y] = date.split('-');
-      if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0};
-      arr.forEach(item=>{
-        yearly[y][item.main] += Number(item.amount);
-      });
-    });
-    let years = Object.keys(yearly).sort();
-    let assetArr = [];
-    let yearSum = {};
-    let prev = initialAsset;
-    let html = "";
-    years.forEach(y=>{
-      let 소비 = yearly[y].소비||0, 투자=yearly[y].투자||0, 수입=yearly[y].수입||0;
-      let sum = 수입 - (소비 + 투자);
-      yearSum[y] = sum;
-      prev += sum;
-      assetArr.push(prev);
-    });
-    if (years.length === 0) {
-      document.getElementById('annualSummary').innerHTML = "";
-      return;
-    }
-    html += `<h3>📈 연말 자산변동</h3>`;
-    html += `<table class="summary-table"><tr>
-      <th>연도</th><th>자산증감(₩)</th><th>누적자산(₩)</th></tr>`;
-    prev = initialAsset;
-    years.forEach((y,i)=>{
-      let sum = yearSum[y];
-      prev += sum;
-      html += `<tr>
-        <td>${y}</td>
-        <td>${sum>=0?"+":""}${sum}</td>
-        <td>${prev}</td>
-      </tr>`;
-    });
-    html += `</table>`;
-    html += `<canvas id="assetChart" width="400" height="260"></canvas>`;
-    document.getElementById('annualSummary').innerHTML = html;
-    const ctx = document.getElementById('assetChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: years,
-        datasets: [{
-          label: '누적자산(₩)',
-          data: assetArr,
-          fill: false,
-          borderColor: '#42a5f5',
-          tension: 0.1
-        }]
-      },
-      options: { plugins: { legend: { display: false } } }
-    });
-    // 메시지
-    if (years.length > 1) {
-      let last = assetArr[assetArr.length-1], prevY = assetArr[assetArr.length-2];
-      let pct = prevY===0 ? 0 : ((last-prevY)/Math.abs(prevY)*100).toFixed(1);
-      html += `<p><b>연말 메시지:</b> 올해 자산은 작년 대비 <b>${pct}% ${last-prevY>=0?'증가':'감소'}</b>했습니다.</p>`;
-      document.getElementById('annualSummary').innerHTML = html;
-    }
-  }
-  // 초기화
-  renderCalendar(currentYear, currentMonth);
+    document.getElementById('closeEntry').onclick = () => {
+      document.getElementById('entryBox').style.display = 'none';
+    };
+    document.getElementById('mainCategory').onchange = updateSubCategories;
+    updateSubCategories();
+  }
+  function updateSubCategories() {
+    const main = document.getElementById('mainCategory').value;
+    const subSel = document.getElementById('subCategory');
+    subSel.innerHTML = '';
+    for(let sub of subCategories[main]) {
+      let opt = document.createElement('option');
+      opt.value = sub; opt.textContent = sub;
+      subSel.appendChild(opt);
+    }
+  }
+  function renderEntryTable(key) {
+    const table = document.getElementById('dataTable');
+    table.innerHTML = '';
+    (allData[key]||[]).forEach((item, idx)=>{
+      let tr = document.createElement('tr');
+      tr.innerHTML = `<td>${item.main}</td><td>${item.sub}</td><td>${item.amount}</td><td>${item.note}</td>
+      <td><button onclick="deleteEntry('${key}',${idx})">삭제</button></td>`;
+      table.appendChild(tr);
+    });
+  }
+  window.deleteEntry = function(key, idx){
+    if(allData[key]) {
+      allData[key].splice(idx,1);
+      renderEntryTable(key);
+      renderCalendar(currentYear, currentMonth);
+    }
+  }
+  document.getElementById('prevMonth').onclick = () => {
+    currentMonth--;
+    if(currentMonth<0) { currentMonth=11; currentYear--; }
+    renderCalendar(currentYear, currentMonth);
+    document.getElementById('entryBox').style.display = 'none';
+  };
+  document.getElementById('nextMonth').onclick = () => {
+    currentMonth++;
+    if(currentMonth>11) { currentMonth=0; currentYear++; }
+    renderCalendar(currentYear, currentMonth);
+    document.getElementById('entryBox').style.display = 'none';
+  };
+
+  // 월별 집계 (소비/투자/수입/잉여금)
+  function updateMonthlySummary() {
+    let summary = {};
+    Object.entries(allData).forEach(([date, arr])=>{
+      const month = date.slice(0,7);
+      if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
+      arr.forEach(item=>{
+        summary[month][item.main] += Number(item.amount);
+      });
+    });
+    let html = `<table class="summary-table"><tr>
+      <th>월</th>
+      <th>소비</th>
+      <th>투자</th>
+      <th>수입</th>
+      <th>잉여금</th>
+    </tr>`;
+    Object.keys(summary).sort().forEach(month=>{
+      let 소비 = summary[month]['소비']||0;
+      let 투자 = summary[month]['투자']||0;
+      let 수입 = summary[month]['수입']||0;
+      let 잉여금 = 수입 - (소비 + 투자);
+      html += `<tr>
+        <td>${month}</td>
+        <td>${소비}</td>
+        <td>${투자}</td>
+        <td>${수입}</td>
+        <td>${잉여금}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+    document.getElementById('monthlySummary').innerHTML = html;
+  }
+  function updateCharts() {
+    const chartDiv = document.getElementById('charts');
+    chartDiv.innerHTML = '';
+    const summary = {};
+    Object.entries(allData).forEach(([date, arr])=>{
+      const month = date.slice(0,7);
+      if (!summary[month]) summary[month] = { 소비:0, 투자:0, 수입:0 };
+      arr.forEach(item=>{
+        summary[month][item.main] += Number(item.amount);
+      });
+    });
+    Object.keys(summary).sort().forEach(month=>{
+      const data = [
+        summary[month]['소비'],
+        summary[month]['투자'],
+        summary[month]['수입'],
+      ];
+      const colors = ['#ffb300','#82b1ff','#43a047'];
+      const canvas = document.createElement('canvas');
+      canvas.id = 'chart-'+month;
+      canvas.width = 300; canvas.height = 300;
+      chartDiv.appendChild(Object.assign(document.createElement('div'),{className:'chart-area',innerHTML:`<h4>${month} 소비/투자/수입 비율</h4>`}));
+      chartDiv.lastChild.appendChild(canvas);
+      new Chart(canvas.getContext('2d'),{
+        type:'pie',
+        data:{
+          labels:['소비','투자','수입'],
+          datasets:[{
+            data:data,
+            backgroundColor: colors
+          }]
+        },
+        options:{
+          plugins:{ legend:{position:'bottom'} }
+        }
+      });
+    });
+  }
+  function updateAnnualSummary() {
+    let yearly = {};
+    Object.entries(allData).forEach(([date, arr])=>{
+      const [y] = date.split('-');
+      if (!yearly[y]) yearly[y]={소비:0,투자:0,수입:0};
+      arr.forEach(item=>{
+        yearly[y][item.main] += Number(item.amount);
+      });
+    });
+    let years = Object.keys(yearly).sort();
+    let assetArr = [];
+    let yearSum = {};
+    let prev = initialAsset;
+    let html = "";
+    years.forEach(y=>{
+      let 소비 = yearly[y].소비||0, 투자=yearly[y].투자||0, 수입=yearly[y].수입||0;
+      let sum = 수입 - (소비 + 투자);
+      yearSum[y] = sum;
+      prev += sum;
+      assetArr.push(prev);
+    });
+    if (years.length === 0) {
+      document.getElementById('annualSummary').innerHTML = "";
+      return;
+    }
+    html += `<h3>📈 연말 자산변동</h3>`;
+    html += `<table class="summary-table"><tr>
+      <th>연도</th><th>자산증감(₩)</th><th>누적자산(₩)</th></tr>`;
+    prev = initialAsset;
+    years.forEach((y,i)=>{
+      let sum = yearSum[y];
+      prev += sum;
+      html += `<tr>
+        <td>${y}</td>
+        <td>${sum>=0?"+":""}${sum}</td>
+        <td>${prev}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+    html += `<canvas id="assetChart" width="400" height="260"></canvas>`;
+    document.getElementById('annualSummary').innerHTML = html;
+    const ctx = document.getElementById('assetChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [{
+          label: '누적자산(₩)',
+          data: assetArr,
+          fill: false,
+          borderColor: '#42a5f5',
+          tension: 0.1
+        }]
+      },
+      options: { plugins: { legend: { display: false } } }
+    });
+    // 메시지
+    if (years.length > 1) {
+      let last = assetArr[assetArr.length-1], prevY = assetArr[assetArr.length-2];
+      let pct = prevY===0 ? 0 : ((last-prevY)/Math.abs(prevY)*100).toFixed(1);
+      html += `<p><b>연말 메시지:</b> 올해 자산은 작년 대비 <b>${pct}% ${last-prevY>=0?'증가':'감소'}</b>했습니다.</p>`;
+      document.getElementById('annualSummary').innerHTML = html;
+    }
+  }
+  // 초기화
+  renderCalendar(currentYear, currentMonth);
 </script>
-</body>
-</html>
-
